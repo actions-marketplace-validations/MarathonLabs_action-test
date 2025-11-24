@@ -3,26 +3,106 @@ description: Run tests using Marathon Cloud
 inputs:
   version:
     description: marathon-cloud cli version to use
-    required: false
-    default: 'latest'
+    required: true 
   apiKey:
     description: "API key for authenticating with Marathon Cloud"
     required: true
   application:
-    description: "Application binary path, e.g. apk file for Android"
+    description: "Application binary path, e.g. apk file for Android or zip file of iOS Application"
     required: true
   testApplication:
-    description: "Test application binary path, e.g. apk file for Android"
+    description: "Test application binary path, e.g. apk file for Android or zip file of iOS Test Runner app or folder containing maestro flow"
     required: true
+  platform:
+    description: "Testing platform. [Android,iOS,Maestro/Android,Maestro/iOS]"
+    required: true
+  osVersion:
+    description: "Android or iOS OS version. For Android one of [8.1, 9, 10, 11, 12, 13, 14, 15, 16]. For iOS one of [17.5, 18.2, 18.4]"
+    required: false
+  systemImage:
+    description: "OS-specific system image. For Android one of [default,google_apis,google_apis_playstore]. For iOS only [default]"
+    required: false
   link:
     description: "Link to commit"
     required: false
   output:
-    description: "Output folder"
+    description: "Output folder for test run results"
     required: false
-  githubToken:
-    description: "GitHub token for pulling marathon-cloud CLI release"
-    required: true
+  outputGlob:
+    description: "Only files matching this glob will be downloaded, i.e. 'tests/**' will download only the JUnit xml files"
+    required: false
+  isolated:
+    description: "Run each test in isolation, i.e. isolated batching"
+    required: false
+  flavor:
+    description: "Type of tests to run. Default: [native]. Possible values: [native, js-test-appium, python-robotframework-appium]"
+    required: false
+  filterFile:
+    description: "File containing test filters in YAML format, following the schema described at https://docs.marathonlabs.io/runner/configuration/filtering/#filtering-logic. For iOS see also https://docs.marathonlabs.io/runner/next/ios#test-plans."
+    required: false
+  wait:
+    description: "Wait for test run to finish if true, exits after triggering a run if false. Defaults to true"
+    required: false
+  name:
+    description: "Name for run, for example it could be description of commit"
+    required: false
+  device:
+    description: "Device type. For Android one of [phone, tv, watch]. For iOS one of [iPhone-11, iPhone-15, iPhone-15-Pro, iPhone-15-Pro-Max, iPhone-16, iPhone-16-Plus, iPhone-16-Pro, iPhone-16-Pro-Max]"
+    required: false
+  xcodeVersion:
+    description: "Xcode version. Only for iOS. Possible values: [15.4, 16.2, 16.3]"
+    required: false
+  xctestplanFilterFile:
+    description: "Test filters supplied as .xctestplan file"
+    required: false
+  xctestplanTargetName:
+    description: "Target name to use for test filtering in .xctestplan"
+    required: false
+  xctestrunEnv:
+    description: "xctestrun environment variables, format: 'VAR1=VALUE1,VAR2=VALUE2'"
+    required: false
+  xctestrunTestEnv:
+    description: "xctestrun testing environment variables, format: 'VAR1=VALUE1,VAR2=VALUE2'"
+    required: false
+  ignoreTestFailures:
+    description: "When tests fail and this option is true then GHA will exit with code 0. By default, GHA will exit with code 1 in case of test failures and 0 for passing tests [possible values: true, false]"
+    required: false
+  pullFiles:
+    description: "Pull files from devices after the test run. The format is 'ROOT1:PATH1,ROOT2:PATH2' where ROOT is one of [EXTERNAL_STORAGE, APP_DATA] and PATH is a relative path to the target file or directory. Example: EXTERNAL_STORAGE:Documents/some-results,APP_DATA:files/my_folder/some_file.txt. Note: Files with the same name and path from different devices may overwrite each other."
+    required: false
+  resultFile:
+    description: "Result file path in a machine-readable format. You can specify the format via extension [yaml,json]. Default file: result.json"
+    required: false
+  branch:
+    description: "Branch for run, for example it could be git branch like develop or feature/about-screen"
+    required: false
+  project:
+    description: "The unique identifier (slug) for the project"
+    required: false
+  grantedPermission:
+    description: "Grant permission to application. Important: Granting is conducted before each test batch (not each test). If you need to grant before each test, please use --isolated mode. Available permissions: calendar, contacts-limited, contacts, location, location-always, photos-add, photos, media-library, microphone, motion, reminders, siri. Format: 'motion,siri'"
+    required: false
+  analyticsReadOnly:
+    description: "If true then test run will not affect any statistical measurements [possible values: true, false]"
+    required: false
+  retryQuotaTestUncompleted:
+    description: "Number of allowed uncompleted executions per test"
+    required: false
+  retryQuotaTestPreventive:
+    description: "Number of allowed preventive retries per test"
+    required: false
+  retryQuotaTestReactive:
+    description: "Number of allowed reactive retries per test"
+    required: false
+  noRetries:
+    description: "Disable all retries [possible values: true, false]"
+    required: false
+  maestroEnv:
+    description: "maestro environment variables, format: 'MAESTRO_APP_ID=com.example,MAESTRO_OTHER_VAR=blahblah'"
+    required: false
+  flows:
+    description: "maestro flows to execute, all the files specified should be inside the testApplication folder: 'flows/my-flow.yaml,flows/subfolder/flow.yaml'"
+    required: false
 branding:
   color: purple
   icon: play-circle
@@ -30,16 +110,42 @@ runs:
   using: composite
   steps:
     - name: Setup marathon-cloud
-      uses: MarathonLabs/setup-marathon-cloud@1.0.0
-      env:
-        GITHUB_TOKEN: ${{ inputs.githubToken }}
+      uses: MarathonLabs/setup-marathon-cloud@2.0.1
       with:
         version: ${{ inputs.version }}
     - name: Run tests using marathon-cloud
-      uses: MarathonLabs/action-invoke@0.1.1
+      uses: MarathonLabs/action-invoke@1.0.15
       with:
         apiKey: ${{ inputs.apiKey }}
         application: ${{ inputs.application }}
         testApplication: ${{ inputs.testApplication }}
+        platform: ${{ inputs.platform }}
+        osVersion: ${{ inputs.osVersion }}
+        systemImage: ${{ inputs.systemImage }}
         link: ${{ inputs.link }}
         output: ${{ inputs.output }}
+        outputGlob: ${{ inputs.outputGlob }}
+        isolated: ${{ inputs.isolated }}
+        flavor: ${{ inputs.flavor }}
+        filterFile: ${{ inputs.filterFile }}
+        wait: ${{ inputs.wait }}
+        name: ${{ inputs.name }}
+        device: ${{ inputs.device }}
+        xcodeVersion: ${{ inputs.xcodeVersion }}
+        xctestplanFilterFile: ${{ inputs.xctestplanFilterFile }}
+        xctestplanTargetName: ${{ inputs.xctestplanTargetName }}
+        xctestrunEnv: ${{ inputs.xctestrunEnv }}
+        xctestrunTestEnv: ${{ inputs.xctestrunTestEnv }}
+        ignoreTestFailures: ${{ inputs.ignoreTestFailures }}
+        pullFiles: ${{ inputs.pullFiles }}
+        resultFile: ${{ inputs.resultFile }}
+        branch: ${{ inputs.branch }}
+        project: ${{ inputs.project }}
+        grantedPermission: ${{ inputs.grantedPermission }}
+        analyticsReadOnly: ${{ inputs.analyticsReadOnly }}
+        retryQuotaTestUncompleted: ${{ inputs.retryQuotaTestUncompleted }}
+        retryQuotaTestPreventive: ${{ inputs.retryQuotaTestPreventive }}
+        retryQuotaTestReactive: ${{ inputs.retryQuotaTestReactive }}
+        noRetries: ${{ inputs.noRetries }}
+        maestroEnv: ${{ inputs.maestroEnv }}
+        flows: ${{ inputs.flows}}
